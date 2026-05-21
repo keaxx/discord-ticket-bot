@@ -1,4 +1,5 @@
 require('dotenv').config();
+const fs = require('fs');
 const {
   Client,
   GatewayIntentBits,
@@ -12,7 +13,6 @@ const {
   PermissionFlagsBits,
   REST,
   Routes,
-  SlashCommandBuilder,
   Events,
 } = require('discord.js');
 
@@ -28,20 +28,20 @@ const client = new Client({
   partials: [Partials.Channel],
 });
 
-// ---------- Slash Commands ----------
-const commands = [
-  new SlashCommandBuilder()
-    .setName('setup-tickets')
-    .setDescription('Send the ticket panel in the current channel.')
-    .setDefaultMemberPermissions(PermissionFlagsBits.Administrator)
-    .toJSON(),
-  new SlashCommandBuilder()
-    .setName('close')
-    .setDescription('Close the current ticket.')
-    .toJSON(),
-];
+// Command collection
+client.commands = new Map();
 
+// ---------- Register Slash Commands ----------
 async function registerCommands() {
+  const commands = [];
+  
+  // Load commands from commands folder
+  const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+  for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+    commands.push(command.data.toJSON());
+  }
+  
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   try {
     console.log('⏳ Registering slash commands...');
@@ -49,13 +49,13 @@ async function registerCommands() {
       Routes.applicationGuildCommands(process.env.CLIENT_ID, config.guildId),
       { body: commands }
     );
-    console.log('✅ Slash commands registered.');
+    console.log(`✅ Registered ${commands.length} slash commands.`);
   } catch (err) {
     console.error('❌ Failed to register commands:', err);
   }
 }
 
-// ---------- Ticket Panel ----------
+// ---------- Ticket Panel Builder ----------
 function buildPanel() {
   const embed = new EmbedBuilder()
     .setTitle(config.embed.title)
@@ -247,10 +247,21 @@ async function closeTicket(interaction) {
   setTimeout(() => channel.delete().catch(() => {}), 5000);
 }
 
+// ---------- Load Commands ----------
+function loadCommands() {
+  const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
+  for (const file of commandFiles) {
+    const command = require(`./commands/${file}`);
+    client.commands.set(command.data.name, command);
+    console.log(`✅ Loaded command: ${command.data.name}`);
+  }
+}
+
 // ---------- Event Handlers ----------
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   client.user.setActivity('tickets 🎫', { type: 3 });
+  loadCommands();
   await registerCommands();
 });
 
@@ -258,17 +269,17 @@ client.on(Events.InteractionCreate, async (interaction) => {
   try {
     // Slash Commands
     if (interaction.isChatInputCommand()) {
-      if (interaction.commandName === 'setup-tickets') {
-        await interaction.channel.send(buildPanel());
+      const command = client.commands.get(interaction.commandName);
+      
+      if (!command) {
         return interaction.reply({
-          content: '✅ Ticket panel sent.',
+          content: '❌ Command not found.',
           ephemeral: true,
         });
       }
 
-      if (interaction.commandName === 'close') {
-        return closeTicket(interaction);
-      }
+      // Execute the command, passing client and config
+      await command.execute(interaction, client, config);
     }
 
     // Dropdown Selection
