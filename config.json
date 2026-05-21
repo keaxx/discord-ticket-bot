@@ -1,0 +1,31 @@
+{
+  "guildId": "YOUR_GUILD_ID",
+  "ticketCategoryId": "CATEGORY_ID_WHERE_TICKETS_OPEN",
+  "supportRoleId": "STAFF_ROLE_ID",
+  "logChannelId": "LOG_CHANNEL_ID",
+  "items": [
+    {
+      "id": "item_1",
+      "label": "Item One",
+      "description": "Purchase Item One — $10",
+      "emoji": "🛒"
+    },
+    {
+      "id": "item_2",
+      "label": "Item Two",
+      "description": "Purchase Item Two — $20",
+      "emoji": "🛍️"
+    }
+  ],
+  "support": {
+    "id": "public_support",
+    "label": "Public Support",
+    "description": "Get help from our staff team",
+    "emoji": "🛠️"
+  },
+  "embed": {
+    "title": "🎫 Open a Ticket",
+    "description": "Need to **purchase an item** or get **public support**?\n\nSelect an option from the dropdown menu below to open a private ticket with our staff team.",
+    "color": "#5865F2"
+  }
+}
